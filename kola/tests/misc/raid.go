@@ -16,11 +16,13 @@ package misc
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/coreos/mantle/kola/cluster"
 	"github.com/coreos/mantle/kola/register"
 	"github.com/coreos/mantle/platform"
 	"github.com/coreos/mantle/platform/conf"
+	"github.com/coreos/mantle/util"
 )
 
 func init() {
@@ -113,7 +115,10 @@ func RootOnRaid(c cluster.TestCluster) {
 func DataOnRaid(c cluster.TestCluster) {
 	m := c.Machines()[0]
 
-	checkIfMountpointIsRaid(c, m, "/var/lib/data")
+	util.Retry(12, time.Second*5, func() error {
+		checkIfMountpointIsRaid(c, m, "/var/lib/data")
+		return nil
+	})
 
 	// reboot it to make sure it comes up again
 	err := m.Reboot()
@@ -121,7 +126,10 @@ func DataOnRaid(c cluster.TestCluster) {
 		c.Fatalf("could not reboot machine: %v", err)
 	}
 
-	checkIfMountpointIsRaid(c, m, "/var/lib/data")
+	util.Retry(12, time.Second*5, func() error {
+		checkIfMountpointIsRaid(c, m, "/var/lib/data")
+		return nil
+	})
 }
 
 type lsblkOutput struct {
@@ -151,7 +159,7 @@ func checkIfMountpointIsRaid(c cluster.TestCluster, m platform.Machine, mountpoi
 
 	foundRoot := checkIfMountpointIsRaidWalker(c, l.Blockdevices, mountpoint)
 	if !foundRoot {
-		c.Fatalf("didn't find root mountpoint in lsblk output")
+		c.Fatalf("didn't find raid1 on %q mountpoint in lsblk output", mountpoint)
 	}
 }
 
